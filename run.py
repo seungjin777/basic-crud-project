@@ -26,6 +26,13 @@ def format_datetime(value):  # 필터를 통해 해당 함수가 실행 됨, utc
     return value.strftime('%Y-%m-%d %H:%M:%S')
 
 
+@app.route("/list")
+def lists():
+    board = mongo.db.board
+    datas = board.find({})  # board 컬렉션의 데이터 다 가져옴
+    return render_template("list.html", datas=list(datas))  # 모든 데이터 list.html로 넘김
+
+
 @app.route("/view/<idx>")  # 상세보기 페이지
 def board_view(idx):  # 펜시방법으로 받는법 주소에 <idx>, 인자 idx (방법 2 : 펜시방식)
     # idx = request.args.get("idx")

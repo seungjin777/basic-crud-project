@@ -1,0 +1,32 @@
+{% if datas|length > 0 %}
+<table>
+    <thead>
+        <tr>
+            <td>번호</td>
+            <td>제목</td>
+            <td>이름</td>
+            <td>날짜</td>
+            <td>조회수</td>
+        </tr>
+    </thead>
+    <tbody>
+        <!--반복되는 구간-->
+        {% for data in datas %}
+        <tr>
+            <!--인데스 자동증가 기능-->
+            <td>{{loop.index}}</td>
+            <!--url_for()를 통해 board_view()함수가 있는 주소를 찾아 줌-->
+            <td><a href="{{url_for('board_view', idx=data._id)}}">{{data.title}}</a></td>
+            <td>{{data.name}}</td>
+            <td>{{data.pubdate | formatdatetime}}</td> <!--필터(함수) 사용하여 가공-->
+            <td>{{data.view}}</td>
+        </tr>
+        {% endfor %}
+        <!--반복되는 구간 끝-->        
+    </tbody>
+</table>
+{% else %}
+<h3>데이터가 없습니다.</h3>
+{% endif %}
+
+<!--jinja 템플릿으로 코드 작어 반복문이나 이프문 작성가능-->
