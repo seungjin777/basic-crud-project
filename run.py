@@ -8,6 +8,7 @@ from flask import abort  # 오류 발생시 리턴할 함수
 from flask import redirect  # 리다이렉트 함수
 from flask import url_for  # 리다이렉트 주소 찾는 함수
 import time  # 시간을 가공하기 위한 라이브러리
+import math
 
 app = Flask(__name__)  # 플라스크 인스턴스 생성
 app.config["MONGO_URI"] = "mongodb://localhost:27017/myweb"  # DB연결
@@ -28,9 +29,37 @@ def format_datetime(value):  # 필터를 통해 해당 함수가 실행 됨, utc
 
 @app.route("/list")
 def lists():
+    # 페이지 값 (값이 없는 경우 기본값은 1)
+    page = request.args.get("page", 1, type=int)
+    # 한페이지당 몇개의 게시물을 출력할지
+    limit = request.args.get("limit", 6, type=int)
+
     board = mongo.db.board
-    datas = board.find({})  # board 컬렉션의 데이터 다 가져옴
-    return render_template("list.html", datas=list(datas))  # 모든 데이터 list.html로 넘김
+    # board 컬렉션의 데이터 지정 페이지만큼 가져옴--> 이전 페이지 스킵, 가져올 개수
+    datas = board.find({}).skip((page - 1) * limit).limit(limit)
+
+    # 게시물의 총 갯수
+    tot_count = board.count_documents({})
+    # 마지막 페이지의 수를 구함
+    last_page_num = math.ceil(tot_count / limit)
+
+    # 페이지 블록 5개씩 표시
+    block_size = 5
+    # 현재 블럭의 위치
+    block_num = int((page - 1) / block_size)
+    # 블럭의 시작 위치
+    block_start = int((block_size * block_num) + 1)
+    # 블럭의 끝 위치
+    block_last = math.ceil(block_start + (block_size - 1))
+
+    return render_template(
+        "list.html",
+        datas=list(datas),
+        limit=limit,
+        page=page,
+        block_start=block_start,
+        block_last=block_last,
+        last_page_num=last_page_num)  # 모든 데이터 list.html로 넘김
 
 
 @app.route("/view/<idx>")  # 상세보기 페이지
