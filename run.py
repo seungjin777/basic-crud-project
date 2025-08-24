@@ -34,12 +34,35 @@ def lists():
     # 한페이지당 몇개의 게시물을 출력할지
     limit = request.args.get("limit", 6, type=int)
 
+    # 넘어온 검색 조건
+    search = request.args.get("search", -1, type=int)  # 검색 종류
+    keyword = request.args.get("keyword", 7, type=str)  # 검색어
+
+    # 최종적으로 완성된 쿼리를 만들 변수
+    query = {}
+    # 검색어 상태를 추가할 리스트 변수
+    search_list = []
+
+    if search == 0:
+        search_list.append({"title": {"$regex": keyword}})  # sql문법의 like와 똑같은기능
+    elif search == 1:
+        search_list.append({"contents": {"$regex": keyword}})
+    elif search == 2:
+        search_list.append({"title": {"$regex": keyword}})
+        search_list.append({"contents": {"$regex": keyword}})
+    elif search == 3:
+        search_list.append({"name": {"$regex": keyword}})
+
+    # 검색 대상이 한개라도 존재할 경우 query 변수에 $or 리스트를 쿼리 합니다.
+    if len(search_list) > 0:
+        query = {"$or": search_list}  # search_list 중 하나라도 존재하면 ok
+
     board = mongo.db.board
     # board 컬렉션의 데이터 지정 페이지만큼 가져옴--> 이전 페이지 스킵, 가져올 개수
-    datas = board.find({}).skip((page - 1) * limit).limit(limit)
+    datas = board.find(query).skip((page - 1) * limit).limit(limit)
 
     # 게시물의 총 갯수
-    tot_count = board.count_documents({})
+    tot_count = board.count_documents(query)
     # 마지막 페이지의 수를 구함
     last_page_num = math.ceil(tot_count / limit)
 
@@ -59,7 +82,9 @@ def lists():
         page=page,
         block_start=block_start,
         block_last=block_last,
-        last_page_num=last_page_num)  # 모든 데이터 list.html로 넘김
+        last_page_num=last_page_num,
+        search=search,
+        keyword=keyword)  # 모든 데이터 list.html로 넘김
 
 
 @app.route("/view/<idx>")  # 상세보기 페이지
@@ -68,6 +93,10 @@ def board_view(idx):  # 펜시방법으로 받는법 주소에 <idx>, 인자 idx
     # /view?idx=쌀랐라라 --> GET방식으로 받아온 리다이렉트 idx값 받아오기 (방법 1 : 일반방식)
 
     if idx is not None:
+        page = request.args.get("page")
+        search = request.args.get("search")
+        keyword = request.args.get("keyword")
+
         board = mongo.db.board  # board 컬렉션 접근
         data = board.find_one({"_id": ObjectId(idx)})
 
@@ -81,7 +110,12 @@ def board_view(idx):  # 펜시방법으로 받는법 주소에 <idx>, 인자 idx
                 "view": data.get("view")
             }
 
-            return render_template("view.html", result=result)
+            return render_template(
+                "view.html",
+                result=result,
+                page=page,
+                search=search,
+                keyword=keyword)
             # 받아온 데이터 result를 view.html로 넘김
 
     return abort(404)  # 404 오류 페이지 리턴
