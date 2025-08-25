@@ -7,11 +7,15 @@ from bson.objectid import ObjectId  # id타입 변경을 위한 라이브러리
 from flask import abort  # 오류 발생시 리턴할 함수
 from flask import redirect  # 리다이렉트 함수
 from flask import url_for  # 리다이렉트 주소 찾는 함수
+from flask import flash  # 리다이렉트시 같이 넘길 메시지 함수?, 시크릿키 설정 해야함!!
 import time  # 시간을 가공하기 위한 라이브러리
 import math
 
+
 app = Flask(__name__)  # 플라스크 인스턴스 생성
 app.config["MONGO_URI"] = "mongodb://localhost:27017/myweb"  # DB연결
+# 세션 전달을 위해 필요한 암호키임 보통은 감추는게 맞다
+app.config["SECRET_KEY"] = "abcd"  # 원래는 깃허브에 올라가지 않게 처리해야함
 mongo = PyMongo(app)  # 모든 코드에서 mongo 인스턴스로 DB접근 가능
 
 
@@ -44,7 +48,8 @@ def lists():
     search_list = []
 
     if search == 0:
-        search_list.append({"title": {"$regex": keyword}})  # sql문법의 like와 똑같은기능
+        # sql문법의 like와 똑같은기능 -- $regex
+        search_list.append({"title": {"$regex": keyword}})
     elif search == 1:
         search_list.append({"contents": {"$regex": keyword}})
     elif search == 2:
@@ -150,6 +155,50 @@ def board_write():
 
     else:  # GET으로 전송(요청)됐을 경우
         return render_template("write.html")  # 그냥 write페이지를 렌더링 시킴
+
+
+@app.route("/join", methods=["GET", "POST"])
+def member_join():
+    if request.method == "POST":  # POST형식으로 요청했을때
+        # join페이지에서 form 데이터 받아오기
+        name = request.form.get("name", type=str)
+        email = request.form.get("email", type=str)
+        pass1 = request.form.get("pass", type=str)
+        pass2 = request.form.get("pass2", type=str)
+
+        # 받아온 데이터 중 하나라도 None일 경우
+        if name == "" or email == "" or pass1 == "" or pass2 == "":
+            flash("입력되지 않은 값이 있습니다.")  # 리다이렉트시 같이 넘겨질 메시지
+            return render_template("join.html")
+
+        # 비밀번호와 비밀번호 확인이 일치하지 않을 경우
+        if pass1 != pass2:
+            flash("비밀번호가 일치하지 않습니다.")
+            return render_template("join.html")
+
+        # DB에서 중복된 이메일이 존재하는지 조회
+        members = mongo.db.members
+        cnt = members.count_documents({"email": email})
+        if cnt > 0:
+            flash("중복된 이메일 주소입니다.")
+            return render_template("join.html")
+
+        current_utc_time = \
+            round(datetime.datetime.now(datetime.UTC).timestamp() * 1000)
+        post = {
+            "name": name,
+            "email": email,
+            "pass": pass1,
+            "joindata": current_utc_time,
+            "logintime": "",
+            "logincount": 0,
+        }
+
+        members.insert_one(post)
+        return ""
+    else:
+        # GET방식으로 날라올 경우 그냥 페이지 리턴
+        return render_template("join.html")
 
 
 if __name__ == "__main__":  # run.py를 직접 실행할때 실행된는 구간(엔트리 포인트?)

@@ -1,0 +1,36 @@
+<!-- 파이썬 플라스크 쪽에서 flash()함수로 넘긴 메시지를 받아줌 -->
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <script>
+            alert("{{messages[-1]}}"); // messages리스트의 맨 마지막 요소를 꺼냄
+        </script>
+    {% endif %}
+{% endwith %}
+<table>
+    <form name="form" action="/join" method="post">
+        <thead>
+            <caption>회원가입</caption>
+        </thead>
+        <tbody>
+            <tr>
+                <td>이름</td>
+                <td><input type="text" name="name"></td>
+            </tr>
+            <tr>
+                <td>이메일</td>
+                <td><input type="text" name="email"></td>
+            </tr>
+            <tr>
+                <td>비밀번호</td>
+                <td><input type="password" name="pass"></td>
+            </tr>
+            <tr>
+                <td>비밀번호 확인</td>
+                <td><input type="password" name="pass2"></td>
+            </tr>
+            <tr>
+                <td colspan="2"><input type="submit" value="가입하기"></td>
+            </tr>
+        </tbody>
+    </form>
+</table>
