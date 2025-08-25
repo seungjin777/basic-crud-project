@@ -3,19 +3,25 @@ from flask import request
 from flask import render_template  # 템플릿 렌더링 함수?
 from flask_pymongo import PyMongo
 import datetime  # 시간관련 라이브러리
+from datetime import timedelta # 세션 유효시간 지정하기 위해 필요한 라이브러리
 from bson.objectid import ObjectId  # id타입 변경을 위한 라이브러리
 from flask import abort  # 오류 발생시 리턴할 함수
 from flask import redirect  # 리다이렉트 함수
 from flask import url_for  # 리다이렉트 주소 찾는 함수
 from flask import flash  # 리다이렉트시 같이 넘길 메시지 함수?, 시크릿키 설정 해야함!!
+from flask import session  # 세션 라이브러리
 import time  # 시간을 가공하기 위한 라이브러리
 import math
 
 
 app = Flask(__name__)  # 플라스크 인스턴스 생성
 app.config["MONGO_URI"] = "mongodb://localhost:27017/myweb"  # DB연결
+
 # 세션 전달을 위해 필요한 암호키임 보통은 감추는게 맞다
 app.config["SECRET_KEY"] = "abcd"  # 원래는 깃허브에 올라가지 않게 처리해야함
+
+# 세션 유효시간 설정 환경변수 30분
+app.config["PERMANET_SESSION_LIFETIME"] = timedelta(minutes=30)
 mongo = PyMongo(app)  # 모든 코드에서 mongo 인스턴스로 DB접근 가능
 
 
@@ -199,6 +205,35 @@ def member_join():
     else:
         # GET방식으로 날라올 경우 그냥 페이지 리턴
         return render_template("join.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def member_login():
+    if request.method == "POST":
+        # post로 요청된 form데이터 받아오기
+        email = request.form.get("email")
+        password = request.form.get("pass")
+
+        members = mongo.db.members
+        data = members.find_one({"email": email})
+
+        if data is None:
+            flash("회원 정보가 없습니다.")
+            return redirect(url_for("member_login"))
+        else:
+            if data.get("pass") == password:  # 해당 이메일의 비밀번호가 일치 헸을 경우
+                # 세션(서버쪽 저정)에 로그인한 회원의 정보 저장
+                session["email"] = email
+                session["name"] = data.get("name")
+                session["id"] = data.get("_id")
+                session.permanent = True  # 세션 유지시간을 할당하기 위해 on 시킴
+                return redirect(url_for("lists"))
+            else:  # 해당 이메일의 비밀번호가 일치하지 않을 경우
+                flash("비밀번호가 일치하지 않습니다.")
+                return redirect(url_for("member_login"))
+        return ""
+    else:
+        return render_template("login.html")
 
 
 if __name__ == "__main__":  # run.py를 직접 실행할때 실행된는 구간(엔트리 포인트?)
