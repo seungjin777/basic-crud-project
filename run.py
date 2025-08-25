@@ -3,13 +3,14 @@ from flask import request
 from flask import render_template  # 템플릿 렌더링 함수?
 from flask_pymongo import PyMongo
 import datetime  # 시간관련 라이브러리
-from datetime import timedelta # 세션 유효시간 지정하기 위해 필요한 라이브러리
+from datetime import timedelta  # 세션 유효시간 지정하기 위해 필요한 라이브러리
 from bson.objectid import ObjectId  # id타입 변경을 위한 라이브러리
 from flask import abort  # 오류 발생시 리턴할 함수
 from flask import redirect  # 리다이렉트 함수
 from flask import url_for  # 리다이렉트 주소 찾는 함수
 from flask import flash  # 리다이렉트시 같이 넘길 메시지 함수?, 시크릿키 설정 해야함!!
 from flask import session  # 세션 라이브러리
+from functools import wraps  # 데코레이터에 사용됨
 import time  # 시간을 가공하기 위한 라이브러리
 import math
 
@@ -23,6 +24,18 @@ app.config["SECRET_KEY"] = "abcd"  # 원래는 깃허브에 올라가지 않게 
 # 세션 유효시간 설정 환경변수 30분
 app.config["PERMANET_SESSION_LIFETIME"] = timedelta(minutes=30)
 mongo = PyMongo(app)  # 모든 코드에서 mongo 인스턴스로 DB접근 가능
+
+
+# 데코레이터 함수(로그인이 필요한 부분에다 함수처럼 사용가능)
+def login_required(f):
+    @wraps(f)
+    def defcorated_function(*args, **kwargs):
+        # 로그인 안돼있을 경우
+        if session.get("id") is None or session.get("id") == "":
+            # 로그인 페이지로
+            return redirect(url_for("member_login", next_url=request.url))
+        return f(*args, **kwargs)
+    return defcorated_function
 
 
 @app.template_filter("formatdatetime")  # html 페이지에서 사용할 수 있는 필터
@@ -99,6 +112,7 @@ def lists():
 
 
 @app.route("/view/<idx>")  # 상세보기 페이지
+@login_required  # 데코레이터 함수 사용
 def board_view(idx):  # 펜시방법으로 받는법 주소에 <idx>, 인자 idx (방법 2 : 펜시방식)
     # idx = request.args.get("idx")
     # /view?idx=쌀랐라라 --> GET방식으로 받아온 리다이렉트 idx값 받아오기 (방법 1 : 일반방식)
@@ -118,7 +132,8 @@ def board_view(idx):  # 펜시방법으로 받는법 주소에 <idx>, 인자 idx
                 "title": data.get("title"),
                 "contents": data.get("contents"),
                 "pubdate": data.get("pubdate"),
-                "view": data.get("view")
+                "view": data.get("view"),
+                "writer_id": data.get("writer_id", "")
             }
 
             return render_template(
@@ -133,6 +148,7 @@ def board_view(idx):  # 펜시방법으로 받는법 주소에 <idx>, 인자 idx
 
 
 @app.route("/write", methods=["GET", "POST"])  # GET, POST를 둘 다 사용할 거다
+@login_required  # 데코레이터 함수 사용
 def board_write():
     if request.method == "POST":  # 데이터가 POST로 전송(요청)됐을 경우
         name = request.form.get("name")
@@ -149,6 +165,7 @@ def board_write():
             "title": title,
             "contents": contents,
             "pubdate": current_utc_time,
+            "writer_id": session.get("id"),  # 본인이 작성한 글인지 판단하기 위한 값
             "view": 0,
         }
 
@@ -213,6 +230,7 @@ def member_login():
         # post로 요청된 form데이터 받아오기
         email = request.form.get("email")
         password = request.form.get("pass")
+        next_url = request.form.get("next_url")
 
         members = mongo.db.members
         data = members.find_one({"email": email})
@@ -227,13 +245,32 @@ def member_login():
                 session["name"] = data.get("name")
                 session["id"] = data.get("_id")
                 session.permanent = True  # 세션 유지시간을 할당하기 위해 on 시킴
-                return redirect(url_for("lists"))
+
+                if next_url is not None:  # 기존 페이지 있었다면
+                    return redirect(next_url)  # 그쪽으로
+                else:
+                    return redirect(url_for("lists"))
             else:  # 해당 이메일의 비밀번호가 일치하지 않을 경우
                 flash("비밀번호가 일치하지 않습니다.")
                 return redirect(url_for("member_login"))
         return ""
     else:
-        return render_template("login.html")
+        next_url = request.args.get("next_url", type=str)
+        if next_url is not None:
+            # 재로그인시 기존페이지를 넘겨주기 위한 편의성 기능
+            return render_template("login.html", next_url=next)
+        else:
+            return render_template("login.html")
+
+
+@app.route("/edit/<idx>", methods=["GET", "POST"])
+def board_edit(idx):  # 글 수정
+    return ""
+
+
+@app.route("/delete/<idx>", methods=["GET", "POST"])
+def board_delete(idx):  # 글 삭제
+    return ""
 
 
 if __name__ == "__main__":  # run.py를 직접 실행할때 실행된는 구간(엔트리 포인트?)
