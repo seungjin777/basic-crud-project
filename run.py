@@ -59,7 +59,7 @@ def lists():
 
     # 넘어온 검색 조건
     search = request.args.get("search", -1, type=int)  # 검색 종류
-    keyword = request.args.get("keyword", 7, type=str)  # 검색어
+    keyword = request.args.get("keyword", "", type=str)  # 검색어
 
     # 최종적으로 완성된 쿼리를 만들 변수
     query = {}
@@ -308,7 +308,17 @@ def board_edit(idx):  # 글 수정
 
 @app.route("/delete/<idx>", methods=["GET", "POST"])
 def board_delete(idx):  # 글 삭제
-    return ""
+    board = mongo.db.board
+    data = board.find_one({"_id": ObjectId(idx)})
+
+    if data.get("writer_id") == session.get("id"):
+        # 권한이 일치하는 경우
+        board.delete_one({"_id": ObjectId(idx)})
+        flash("삭제 되었습니다.")
+    else:
+        # 권한이 없는 경우
+        flash("삭제 권한이 없습니다.")
+    return redirect(url_for("lists"))
 
 
 if __name__ == "__main__":  # run.py를 직접 실행할때 실행된는 구간(엔트리 포인트?)
