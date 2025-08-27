@@ -123,7 +123,12 @@ def board_view(idx):  # 펜시방법으로 받는법 주소에 <idx>, 인자 idx
         keyword = request.args.get("keyword")
 
         board = mongo.db.board  # board 컬렉션 접근
-        data = board.find_one({"_id": ObjectId(idx)})
+        # data = board.find_one({"_id": ObjectId(idx)})
+        # find와 update를 동시에 할 수 있는 함수
+        data = board.find_one_and_update(
+            {"_id": ObjectId(idx)},
+            {"$inc": {"view": 1}},  # view값을 1만큼 증가
+            return_document=True)  # 업데이트 적용된 다음 리턴
 
         if data is not None:
             result = {
@@ -265,7 +270,40 @@ def member_login():
 
 @app.route("/edit/<idx>", methods=["GET", "POST"])
 def board_edit(idx):  # 글 수정
-    return ""
+    if request.method == "GET":  # 수정 버튼으로 진입할 경우
+        board = mongo.db.board
+        data = board.find_one({"_id": ObjectId(idx)})  # 유저 존재하는지
+        if data is None:
+            flash("해당 게시물이 존재하지 않습니다.")
+            return redirect(url_for("list"))
+        else:
+            # 세션(현재 사용자)의 id와 받아온 idx값이 같아야 수정 가능
+            if session.get("id") == data.get("writer_id"):
+                # 값이 일치했으니 작성된 정보를 보냄
+                return render_template("edit.html", data=data)
+            else:
+                # 값이 다르면 권한이 없는것임
+                flash("글 수정 권한이 없습니다.")
+                return redirect(url_for("lists"))
+    else:  # 수정을 눌렀을경우 (POST요청)
+        title = request.form.get("title")
+        contents = request.form.get("contents")
+
+        board = mongo.db.board
+        data = board.find_one({"_id": ObjectId(idx)})
+        if session.get("id") == data.get("writer_id"):
+            # 본인 맞을 경우 수정 go
+            board.update_one({"_id": ObjectId(idx)}, {
+                "$set": {
+                    "title": title,  # 제목과
+                    "contents": contents  # 내용만 수정할 수 있게
+                }
+            })
+            flash("수정되었습니다.")
+            return redirect(url_for("board_view", idx=idx))
+        else:
+            flash("글 수정 권한이 없습니다.")
+            return redirect(url_for("lists"))
 
 
 @app.route("/delete/<idx>", methods=["GET", "POST"])
