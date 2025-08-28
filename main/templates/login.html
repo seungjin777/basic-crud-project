@@ -1,5 +1,16 @@
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <script>
+            alert("{{messages[-1]}}"); // messages리스트의 맨 마지막 요소를 꺼냄
+        </script>
+    {% endif %}
+{% endwith %}
 <table>
     <form name="form" action="/login" method="POST">
+        {% if next_url %}
+            <!--로그인 실패로 해당페이지가 리다이렉팅 되었을때 기존페이지를 기억하기 위한 편의성 장치-->
+            <input type="hidden" name="next_url" value="{{next_url}}">
+        {% endif %}
         <thead>
             <caption>회원 로그인</caption>
         </thead>

@@ -20,7 +20,12 @@ for i in range(5):
     # start=0,10,20... 페이지네이션 / 언어, 지역, 개인화(비활성) 고정
     params = {"q": query, "start": i * 10, "hl": "ko", "gl": "KR", "pws": "0"}
 
-    r = requests.get("https://www.google.com/search", params=params, headers=header, timeout=10)
+    r = requests.get(
+            "https://www.google.com/search",
+            params=params,
+            headers=header,
+            timeout=10
+        )
     r.raise_for_status()
 
     bs = BeautifulSoup(r.text, "lxml")  # lxml 파서로 파싱
@@ -30,7 +35,8 @@ for i in range(5):
 
     for li in lists:
         # 현재 UTC 밀리초 타임스탬프
-        current_utc_time = round(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+        current_utc_time = round(
+            datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
 
         try:
             # 제목: 특정 클래스 대신 h3 자체 사용(가장 내구성 좋음)
