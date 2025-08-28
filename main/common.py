@@ -11,6 +11,6 @@ def login_required(f):
         # 로그인 안돼있을 경우
         if session.get("id") is None or session.get("id") == "":
             # 로그인 페이지로
-            return redirect(url_for("member_login", next_url=request.url))
+            return redirect(url_for("member.member_login", next_url=request.url))
         return f(*args, **kwargs)
     return defcorated_function

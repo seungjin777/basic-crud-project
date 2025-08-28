@@ -7,8 +7,11 @@ from main import url_for
 from main import flash
 from main import session
 
+from flask import Blueprint
+blueprint = Blueprint("member", __name__, url_prefix="/member")
 
-@app.route("/join", methods=["GET", "POST"])
+
+@blueprint.route("/join", methods=["GET", "POST"])
 def member_join():
     if request.method == "POST":  # POST형식으로 요청했을때
         # join페이지에서 form 데이터 받아오기
@@ -52,7 +55,7 @@ def member_join():
         return render_template("join.html")
 
 
-@app.route("/login", methods=["GET", "POST"])
+@blueprint.route("/login", methods=["GET", "POST"])
 def member_login():
     if request.method == "POST":
         # post로 요청된 form데이터 받아오기
@@ -65,7 +68,7 @@ def member_login():
 
         if data is None:
             flash("회원 정보가 없습니다.")
-            return redirect(url_for("member_login"))
+            return redirect(url_for("member.member_login"))
         else:
             if data.get("pass") == password:  # 해당 이메일의 비밀번호가 일치 헸을 경우
                 # 세션(서버쪽 저정)에 로그인한 회원의 정보 저장
@@ -77,11 +80,10 @@ def member_login():
                 if next_url is not None:  # 기존 페이지 있었다면
                     return redirect(next_url)  # 그쪽으로
                 else:
-                    return redirect(url_for("lists"))
+                    return redirect(url_for("board.lists"))
             else:  # 해당 이메일의 비밀번호가 일치하지 않을 경우
                 flash("비밀번호가 일치하지 않습니다.")
-                return redirect(url_for("member_login"))
-        return ""
+                return redirect(url_for("member.member_login"))
     else:
         next_url = request.args.get("next_url", type=str)
         if next_url is not None:

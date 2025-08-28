@@ -1,7 +1,7 @@
 <html>
     <body>
         <table>
-            <form name="form" method="POST" action="/write">
+            <form name="form" method="POST" action="{{url_for('board.board_write')}}">
                 <tr>
                     <td>작성자</td>
                     <td><input type="text" name="name" value="{{session['name']}}"></td>

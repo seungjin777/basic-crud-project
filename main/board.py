@@ -10,9 +10,14 @@ from main import flash
 from main import session
 from main import ObjectId
 from main import math
+from flask import Blueprint
+
+# board로 선언된 블루프린트에는 모두 주소 앞에 /board를 붙여주겠다
+# app.  --> blueprint. 으로 변경
+blueprint = Blueprint("board", __name__, url_prefix="/board")
 
 
-@app.route("/list")
+@blueprint.route("/list")
 def lists():
     # 페이지 값 (값이 없는 경우 기본값은 1)
     page = request.args.get("page", 1, type=int)
@@ -73,7 +78,7 @@ def lists():
         keyword=keyword)  # 모든 데이터 list.html로 넘김
 
 
-@app.route("/view/<idx>")  # 상세보기 페이지
+@blueprint.route("/view/<idx>")  # 상세보기 페이지
 @login_required  # 데코레이터 함수 사용
 def board_view(idx):  # 펜시방법으로 받는법 주소에 <idx>, 인자 idx (방법 2 : 펜시방식)
     # idx = request.args.get("idx")
@@ -114,7 +119,7 @@ def board_view(idx):  # 펜시방법으로 받는법 주소에 <idx>, 인자 idx
     return abort(404)  # 404 오류 페이지 리턴
 
 
-@app.route("/write", methods=["GET", "POST"])  # GET, POST를 둘 다 사용할 거다
+@blueprint.route("/write", methods=["GET", "POST"])  # GET, POST를 둘 다 사용할 거다
 @login_required  # 데코레이터 함수 사용
 def board_write():
     if request.method == "POST":  # 데이터가 POST로 전송(요청)됐을 경우
@@ -140,21 +145,21 @@ def board_write():
         print(x.inserted_id)  # post 값이 삽입되면서 자동으로 생성된 id값
         print(name, title, contents, current_utc_time)
 
-        return redirect(url_for("board_view", idx=x.inserted_id))
+        return redirect(url_for("board.board_view", idx=x.inserted_id))
         # board_view함수가 가리키는 url로 id값 리다이렉트
 
     else:  # GET으로 전송(요청)됐을 경우
         return render_template("write.html")  # 그냥 write페이지를 렌더링 시킴
 
 
-@app.route("/edit/<idx>", methods=["GET", "POST"])
+@blueprint.route("/edit/<idx>", methods=["GET", "POST"])
 def board_edit(idx):  # 글 수정
     if request.method == "GET":  # 수정 버튼으로 진입할 경우
         board = mongo.db.board
         data = board.find_one({"_id": ObjectId(idx)})  # 유저 존재하는지
         if data is None:
             flash("해당 게시물이 존재하지 않습니다.")
-            return redirect(url_for("list"))
+            return redirect(url_for("board.list"))
         else:
             # 세션(현재 사용자)의 id와 받아온 idx값이 같아야 수정 가능
             if session.get("id") == data.get("writer_id"):
@@ -163,7 +168,7 @@ def board_edit(idx):  # 글 수정
             else:
                 # 값이 다르면 권한이 없는것임
                 flash("글 수정 권한이 없습니다.")
-                return redirect(url_for("lists"))
+                return redirect(url_for("board.lists"))
     else:  # 수정을 눌렀을경우 (POST요청)
         title = request.form.get("title")
         contents = request.form.get("contents")
@@ -179,13 +184,13 @@ def board_edit(idx):  # 글 수정
                 }
             })
             flash("수정되었습니다.")
-            return redirect(url_for("board_view", idx=idx))
+            return redirect(url_for("board.board_view", idx=idx))
         else:
             flash("글 수정 권한이 없습니다.")
-            return redirect(url_for("lists"))
+            return redirect(url_for("board.lists"))
 
 
-@app.route("/delete/<idx>", methods=["GET", "POST"])
+@blueprint.route("/delete/<idx>", methods=["GET", "POST"])
 def board_delete(idx):  # 글 삭제
     board = mongo.db.board
     data = board.find_one({"_id": ObjectId(idx)})
@@ -197,4 +202,4 @@ def board_delete(idx):  # 글 삭제
     else:
         # 권한이 없는 경우
         flash("삭제 권한이 없습니다.")
-    return redirect(url_for("lists"))
+    return redirect(url_for("board.lists"))

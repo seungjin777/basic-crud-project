@@ -30,3 +30,7 @@ from .common import login_required
 from .filter import format_datetime
 from . import board
 from . import member
+
+# 블루프린터가 동작 되기 위한 설정
+app.register_blueprint(board.blueprint)
+app.register_blueprint(member.blueprint)
